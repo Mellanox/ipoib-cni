@@ -1,0 +1,40 @@
+hash: 8c9d20a09bbeba89ab7b15db8d9a668c7b166713620fbd4ef2da4aa1f40dda6f
+updated: 2019-11-24T10:40:12.099214864+02:00
+imports:
+- name: github.com/containernetworking/cni
+  version: 4cfb7b568922a3c79a23e438dc52fe537fc9687e
+  subpackages:
+  - pkg/invoke
+  - pkg/skel
+  - pkg/types
+  - pkg/types/020
+  - pkg/types/current
+  - pkg/version
+- name: github.com/containernetworking/plugins
+  version: d5efdfe1f6d6e8e9e9494e3f43be54f76c0f8fd6
+  subpackages:
+  - pkg/ip
+  - pkg/ipam
+  - pkg/ns
+  - pkg/utils/buildversion
+  - pkg/utils/hwaddr
+  - pkg/utils/sysctl
+- name: github.com/coreos/go-iptables
+  version: 78b5fff24e6df8886ef8eca9411f683a884349a5
+  subpackages:
+  - iptables
+- name: github.com/j-keck/arping
+  version: 52070c5014d8939fc2d5e7bdf8d8124b423cbf45
+- name: github.com/safchain/ethtool
+  version: 42ed695e3de80b9d695f280295fd7994639f209d
+- name: github.com/vishvananda/netlink
+  version: 07ace697bea4b7641fbc6dcf7c90432c6b8bea5c
+  subpackages:
+  - nl
+- name: github.com/vishvananda/netns
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
+- name: golang.org/x/sys
+  version: fae7ac547cb717d141c433a2a173315e216b64c4
+  subpackages:
+  - unix
+testImports: []
