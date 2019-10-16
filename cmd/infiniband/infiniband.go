@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	IPv4InterfaceArpProxySysctlTemplate = "net.ipv4.conf.%s.proxy_arp"
+	ipV4InterfaceArpProxySysctlTemplate = "net.ipv4.conf.%s.proxy_arp"
 )
 
+// NetConf extends cni NetConf
 type NetConf struct {
 	types.NetConf
 	Master string `json:"master"`
@@ -83,7 +84,7 @@ func createIpoibLink(conf *NetConf, ifName string, netns ns.NetNS) (*current.Int
 	}
 
 	err = netns.Do(func(_ ns.NetNS) error {
-		ipv4SysctlValueName := fmt.Sprintf(IPv4InterfaceArpProxySysctlTemplate, tmpName)
+		ipv4SysctlValueName := fmt.Sprintf(ipV4InterfaceArpProxySysctlTemplate, tmpName)
 		if _, err := sysctl.Sysctl(ipv4SysctlValueName, "1"); err != nil {
 			// remove the newly added link and ignore errors, because we already are in a failed state
 			_ = netlink.LinkDel(ipoibLink)
