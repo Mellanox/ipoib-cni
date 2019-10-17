@@ -13,6 +13,23 @@ PKGS=$(or $(PKG),$(shell cd $(BASE) && env GOPATH=$(GOPATH) $(GO) list ./... | g
 export GOPATH
 export GOBIN
 
+# Docker
+IMAGE_BUILDER?=@docker
+IMAGEDIR=$(BASE)/images
+DOCKERFILE?=$(CURDIR)/Dockerfile
+TAG?=mellanox/infiniband-cni
+IMAGE_BUILD_OPTS?=
+# Accept proxy settings for docker
+# To pass proxy for Docker invoke it as 'make image HTTP_POXY=http://192.168.0.1:8080'
+DOCKERARGS=
+ifdef HTTP_PROXY
+	DOCKERARGS += --build-arg http_proxy=$(HTTP_PROXY)
+endif
+ifdef HTTPS_PROXY
+	DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
+endif
+IMAGE_BUILD_OPTS += $(DOCKERARGS)
+
 # Go tools
 GO      = go
 GOFMT   = gofmt
@@ -55,6 +72,12 @@ lint: | $(BASE) $(GOLINT) ; $(info  running golint...) @ ## Run golint
 	$Q cd $(BASE) && ret=0 && for pkg in $(PKGS); do \
 		test -z "$$($(GOLINT) $$pkg | tee /dev/stderr)" || ret=1 ; \
 	 done ; exit $$ret
+
+# Container image
+.PHONY: image
+image: | $(BASE) ; $(info Building Docker image...)  ## Build conatiner image
+	$(IMAGE_BUILDER) build -t $(TAG) -f $(DOCKERFILE)  $(CURDIR) $(IMAGE_BUILD_OPTS)
+
 
 # Misc
 
