@@ -1,9 +1,21 @@
 language: go
 sudo: required
 
+matrix:
+  include:
+    - name: amd64
+      os: linux
+      env: ARCH=amd64
+    - name: ppc64le
+      os: linux-ppc64le
+      env:
+        - ARCH=ppc64le
+        - DOCKERFILE=Dockerfile.ppc64le
+
 env:
   global:
     - PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+    - IMAGE_NAME=mellanox/infiniband-cni
 
 script:
   - make lint
@@ -17,7 +29,14 @@ deploy:
   # Push image to Dockerhub on merge to master
   - provider: script
     skip_cleanup: true
-    script: docker push mellanox/infiniband-cni
+    script: >
+      bash -c '
+      if [ "${ARCH}" == "amd64" ]; then
+        docker push $IMAGE_NAME
+      fi
+      docker tag $IMAGE_NAME $IMAGE_NAME:$ARCH;
+      docker push $IMAGE_NAME:$ARCH;
+      echo done'
     on:
       branch: master
   # Push image to Dockerhub on tag
@@ -25,8 +44,11 @@ deploy:
     skip_cleanup: true
     script: >
       bash -c '
-      docker tag mellanox/infiniband-cni mellanox/infiniband-cni:$TRAVIS_TAG;
-      docker push mellanox/infiniband-cni:$TRAVIS_TAG;
+      if [ "${ARCH}" == "amd64" ]; then
+        docker push $IMAGE_NAME:$TRAVIS_TAG
+      fi
+      docker tag $IMAGE_NAME $IMAGE_NAME:$TRAVIS_TAG-$ARCH;
+      docker push $IMAGE_NAME:$TRAVIS_TAG-$ARCH;
       echo foo'
     on:
       tags: true
