@@ -1,20 +1,20 @@
 FROM golang:alpine as builder
 
-ADD . /usr/src/infiniband-cni
+ADD . /usr/src/ipoib-cni
 
 ENV HTTP_PROXY $http_proxy
 ENV HTTPS_PROXY $https_proxy
 
 RUN apk add --update --virtual build-dependencies build-base linux-headers && \
-    cd /usr/src/infiniband-cni && \
+    cd /usr/src/ipoib-cni && \
     make clean && \
     make build
 
 FROM alpine
-COPY --from=builder /usr/src/infiniband-cni/build/infiniband /usr/bin/
+COPY --from=builder /usr/src/ipoib-cni/build/ipoib /usr/bin/
 WORKDIR /
 
-LABEL io.k8s.display-name="INFINIBAND CNI"
+LABEL io.k8s.display-name="IPoIB CNI"
 
 ADD ./images/entrypoint.sh /
 

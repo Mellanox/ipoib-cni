@@ -15,7 +15,7 @@ matrix:
 env:
   global:
     - PATH=$GOROOT/bin:$GOPATH/bin:$PATH
-    - IMAGE_NAME=mellanox/infiniband-cni
+    - IMAGE_NAME=mellanox/ipoib-cni
 
 script:
   - make lint

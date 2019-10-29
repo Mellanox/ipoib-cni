@@ -207,7 +207,7 @@ func cmdDel(args *skel.CmdArgs) error {
 }
 
 func main() {
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("infiniband-cni"))
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("ipoib-cni"))
 }
 
 func cmdCheck(args *skel.CmdArgs) error {

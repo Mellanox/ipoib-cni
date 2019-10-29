@@ -1,6 +1,6 @@
 # Package related
-BINARY_NAME=infiniband
-PACKAGE=infiniband-cni
+BINARY_NAME=ipoib
+PACKAGE=ipoib-cni
 ORG_PATH=github.com/Mellanox
 REPO_PATH=$(ORG_PATH)/$(PACKAGE)
 GOPATH=$(CURDIR)/.gopath
@@ -17,7 +17,7 @@ export GOBIN
 IMAGE_BUILDER?=@docker
 IMAGEDIR=$(BASE)/images
 DOCKERFILE?=$(CURDIR)/Dockerfile
-TAG?=mellanox/infiniband-cni
+TAG?=mellanox/ipoib-cni
 IMAGE_BUILD_OPTS?=
 # Accept proxy settings for docker
 # To pass proxy for Docker invoke it as 'make image HTTP_POXY=http://192.168.0.1:8080'
