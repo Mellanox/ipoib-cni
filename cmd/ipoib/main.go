@@ -146,6 +146,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	result := &current.Result{CNIVersion: cniVersion, Interfaces: []*current.Interface{ibLink}}
 
 	if isIpamProvided {
+		if n.IPAM.Type == "dhcp" {
+			return fmt.Errorf("ipam dhcp type is not supported")
+		}
 		if err := handleIpamConfig(n, args, netns, result); err != nil {
 			return err
 		}
@@ -182,6 +185,9 @@ func cmdDel(args *skel.CmdArgs) error {
 	isIpamProvided := n.IPAM.Type != ""
 
 	if isIpamProvided {
+		if n.IPAM.Type == "dhcp" {
+			return fmt.Errorf("ipam dhcp type is not supported")
+		}
 		err = ipam.ExecDel(n.IPAM.Type, args.StdinData)
 		if err != nil {
 			return err
