@@ -1,5 +1,5 @@
-hash: 8c9d20a09bbeba89ab7b15db8d9a668c7b166713620fbd4ef2da4aa1f40dda6f
-updated: 2019-11-24T10:40:12.099214864+02:00
+hash: 15f5512644c830c6ca660e6daa1c30735c7898570ee7a59020321098464abce4
+updated: 2019-11-24T10:45:12.400183198+02:00
 imports:
 - name: github.com/containernetworking/cni
   version: 4cfb7b568922a3c79a23e438dc52fe537fc9687e
@@ -23,10 +23,43 @@ imports:
   version: 78b5fff24e6df8886ef8eca9411f683a884349a5
   subpackages:
   - iptables
+- name: github.com/davecgh/go-spew
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  subpackages:
+  - spew
 - name: github.com/j-keck/arping
   version: 52070c5014d8939fc2d5e7bdf8d8124b423cbf45
+- name: github.com/onsi/ginkgo
+  version: ce5d301e555bb672c693c099ba6ca5087b06c0b4
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - types
+- name: github.com/pmezard/go-difflib
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  subpackages:
+  - difflib
 - name: github.com/safchain/ethtool
   version: 42ed695e3de80b9d695f280295fd7994639f209d
+- name: github.com/stretchr/objx
+  version: 35313a95ee26395aa17d366c71a2ccf788fa69b6
+- name: github.com/stretchr/testify
+  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
+  subpackages:
+  - assert
+  - mock
 - name: github.com/vishvananda/netlink
   version: 07ace697bea4b7641fbc6dcf7c90432c6b8bea5c
   subpackages:
@@ -37,4 +70,31 @@ imports:
   version: fae7ac547cb717d141c433a2a173315e216b64c4
   subpackages:
   - unix
-testImports: []
+- name: gopkg.in/yaml.v2
+  version: 1f64d6156d11335c3f22d9330b0ad14fc1e789ce
+testImports:
+- name: github.com/hpcloud/tail
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  subpackages:
+  - ratelimiter
+  - util
+  - watch
+  - winfile
+- name: github.com/onsi/gomega
+  version: 2152b45fa28a361beba9aab0885972323a444e28
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/tomb.v1
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58

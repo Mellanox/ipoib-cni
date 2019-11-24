@@ -1,10 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/containernetworking/plugins/pkg/utils/sysctl"
+	"github.com/Mellanox/ipoib-cni/pkg/config"
+	"github.com/Mellanox/ipoib-cni/pkg/ipoib"
+	"github.com/Mellanox/ipoib-cni/pkg/types"
 	"github.com/j-keck/arping"
 	"github.com/vishvananda/netlink"
 	"net"
@@ -12,7 +13,7 @@ import (
 	"runtime"
 
 	"github.com/containernetworking/cni/pkg/skel"
-	"github.com/containernetworking/cni/pkg/types"
+	cniTypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/cni/pkg/version"
 
@@ -22,100 +23,12 @@ import (
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
 )
 
-const (
-	ipV4InterfaceArpProxySysctlTemplate = "net.ipv4.conf.%s.proxy_arp"
-)
-
-// NetConf extends cni NetConf
-type NetConf struct {
-	types.NetConf
-	Master string `json:"master"`
-}
-
 func init() {
 	runtime.LockOSThread()
 }
 
-func loadConf(bytes []byte) (*NetConf, string, error) {
-	n := &NetConf{}
-	if err := json.Unmarshal(bytes, n); err != nil {
-		return nil, "", fmt.Errorf("failed to load netconf: %v", err)
-	}
-	if n.Master == "" {
-		return nil, "", fmt.Errorf("host master interface is missing")
-	}
-	return n, n.CNIVersion, nil
-}
-
-func createIpoibLink(conf *NetConf, ifName string, netns ns.NetNS) (*current.Interface, error) {
-	iface := &current.Interface{}
-	m, err := netlink.LinkByName(conf.Master)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup master %q: %v", conf.Master, err)
-	}
-
-	tmpName, err := ip.RandomVethName()
-	if err != nil {
-		return nil, err
-	}
-
-	ipoibLink := &netlink.IPoIB{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:        tmpName,
-			ParentIndex: m.Attrs().Index,
-			// Due to kernal bug create the link then move it to the desired namespace
-			//		Namespace:   netlink.NsFd(int(curNetns.Fd())),
-		},
-		Pkey:   0x7fff,
-		Mode:   netlink.IPOIB_MODE_DATAGRAM,
-		Umcast: 1,
-	}
-
-	if err := netlink.LinkAdd(ipoibLink); err != nil {
-		return nil, fmt.Errorf("failed to create interface: %v", err)
-	}
-	link, err := netlink.LinkByName(tmpName)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
-		return nil, fmt.Errorf("failed to move interfaceee %s to netns: %v", tmpName, err)
-	}
-
-	err = netns.Do(func(_ ns.NetNS) error {
-		ipv4SysctlValueName := fmt.Sprintf(ipV4InterfaceArpProxySysctlTemplate, tmpName)
-		if _, err := sysctl.Sysctl(ipv4SysctlValueName, "1"); err != nil {
-			// remove the newly added link and ignore errors, because we already are in a failed state
-			_ = netlink.LinkDel(ipoibLink)
-			return fmt.Errorf("failed to set proxy_arp on newly added interface %q: %v", tmpName, err)
-		}
-
-		err := ip.RenameLink(tmpName, ifName)
-		if err != nil {
-			_ = netlink.LinkDel(ipoibLink)
-			return fmt.Errorf("failed to rename interface to %q: %v", ifName, err)
-		}
-		iface.Name = ifName
-
-		ipoibContLink, err := netlink.LinkByName(ifName)
-		if err != nil {
-			return fmt.Errorf("failed to refetch interface %q: %v", ifName, err)
-		}
-		iface.Mac = ipoibContLink.Attrs().HardwareAddr.String()
-		iface.Sandbox = netns.Path()
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return iface, nil
-}
-
 func cmdAdd(args *skel.CmdArgs) error {
-	n, cniVersion, err := loadConf(args.StdinData)
+	n, cniVersion, err := config.LoadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -128,7 +41,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 	defer netns.Close()
 
-	ibLink, err := createIpoibLink(n, args.IfName, netns)
+	ipoibManager := ipoib.NewIpoibManager()
+
+	ibLink, err := ipoibManager.CreateIpoibLink(n, args.IfName, netns)
 	if err != nil {
 		return err
 	}
@@ -136,7 +51,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// Delete link if err to avoid link leak in this ns
 	defer func() {
 		if err != nil {
-			netns.Do(func(_ ns.NetNS) error {
+			_ = netns.Do(func(_ ns.NetNS) error {
 				return ip.DelLinkByName(args.IfName)
 			})
 		}
@@ -173,11 +88,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	result.DNS = n.DNS
 
-	return types.PrintResult(result, cniVersion)
+	return cniTypes.PrintResult(result, cniVersion)
 }
 
 func cmdDel(args *skel.CmdArgs) error {
-	n, _, err := loadConf(args.StdinData)
+	n, _, err := config.LoadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -198,18 +113,9 @@ func cmdDel(args *skel.CmdArgs) error {
 		return nil
 	}
 
-	// There is a netns so try to clean up. Delete can be called multiple times
-	// so don't return an error if the device is already removed.
-	err = ns.WithNetNSPath(args.Netns, func(_ ns.NetNS) error {
-		if err := ip.DelLinkByName(args.IfName); err != nil {
-			if err != ip.ErrLinkNotFound {
-				return err
-			}
-		}
-		return nil
-	})
+	ipoibManager := ipoib.NewIpoibManager()
 
-	return err
+	return ipoibManager.RemoveIpoibLink(args.IfName, args.Netns)
 }
 
 func main() {
@@ -218,7 +124,7 @@ func main() {
 
 func cmdCheck(args *skel.CmdArgs) error {
 
-	n, _, err := loadConf(args.StdinData)
+	n, _, err := config.LoadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -330,7 +236,7 @@ func validateCniContainerInterface(iface current.Interface, parentIndex int) err
 	return nil
 }
 
-func handleIpamConfig(config *NetConf, args *skel.CmdArgs, netns ns.NetNS, result *current.Result) error {
+func handleIpamConfig(config *types.NetConf, args *skel.CmdArgs, netns ns.NetNS, result *current.Result) error {
 	// run the IPAM plugin and get back the config to apply
 	r, err := ipam.ExecAdd(config.IPAM.Type, args.StdinData)
 	if err != nil {
@@ -340,7 +246,7 @@ func handleIpamConfig(config *NetConf, args *skel.CmdArgs, netns ns.NetNS, resul
 	// Invoke ipam del if err to avoid ip leak
 	defer func() {
 		if err != nil {
-			ipam.ExecDel(config.IPAM.Type, args.StdinData)
+			_ = ipam.ExecDel(config.IPAM.Type, args.StdinData)
 		}
 	}()
 

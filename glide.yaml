@@ -20,4 +20,6 @@ import:
 - package: github.com/vishvananda/netlink
   version: 07ace697bea4b7641fbc6dcf7c90432c6b8bea5c
   subpackages:
-    - nl
+  - nl
+- package: github.com/onsi/ginkgo
+  version: ~1.10.3
