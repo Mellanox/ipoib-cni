@@ -70,12 +70,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 	} else {
 		// For L2 just change interface status to up
 		err = netns.Do(func(_ ns.NetNS) error {
-			macvlanInterfaceLink, err := netlink.LinkByName(args.IfName)
+			ipoibInterfaceLink, err := netlink.LinkByName(args.IfName)
 			if err != nil {
 				return fmt.Errorf("failed to find interface name %q: %v", ibLink.Name, err)
 			}
 
-			if err := netlink.LinkSetUp(macvlanInterfaceLink); err != nil {
+			if err := netlink.LinkSetUp(ipoibInterfaceLink); err != nil {
 				return fmt.Errorf("failed to set %q UP: %v", args.IfName, err)
 			}
 
@@ -109,13 +109,20 @@ func cmdDel(args *skel.CmdArgs) error {
 		}
 	}
 
-	if args.Netns == "" {
-		return nil
+	netns, err := ns.GetNS(args.Netns)
+	if err != nil {
+		_, ok := err.(ns.NSPathNotExistErr)
+		if ok {
+			return nil
+		}
+
+		return fmt.Errorf("failed to open netns %s: %q", netns, err)
 	}
+	defer netns.Close()
 
 	ipoibManager := ipoib.NewIpoibManager()
 
-	return ipoibManager.RemoveIpoibLink(args.IfName, args.Netns)
+	return ipoibManager.RemoveIpoibLink(args.IfName, netns)
 }
 
 func main() {
@@ -224,13 +231,7 @@ func validateCniContainerInterface(iface current.Interface, parentIndex int) err
 
 	_, isIpoib := link.(*netlink.IPoIB)
 	if !isIpoib {
-		return fmt.Errorf("container interface %s not of type macvlan", link.Attrs().Name)
-	}
-
-	if iface.Mac != "" {
-		if iface.Mac != link.Attrs().HardwareAddr.String() {
-			return fmt.Errorf("interface %s Mac %s doesn't match container Mac: %s", iface.Name, iface.Mac, link.Attrs().HardwareAddr)
-		}
+		return fmt.Errorf("container interface %s not of type ipoib", link.Attrs().Name)
 	}
 
 	return nil
@@ -264,7 +265,7 @@ func handleIpamConfig(config *types.NetConf, args *skel.CmdArgs, netns ns.NetNS,
 	result.Routes = ipamResult.Routes
 
 	for _, ipc := range result.IPs {
-		// All addresses apply to the container macvlan interface
+		// All addresses apply to the container ipoib interface
 		ipc.Interface = current.Int(0)
 	}
 
