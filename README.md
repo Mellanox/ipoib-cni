@@ -33,6 +33,7 @@ Allow user to create IPoIB link and move it to the pod.
 The supported architectures:
 * AMD64
 * PPC64LE
+
 Buiding image for AMD64:
 ```
 $ DOCKERFILE=Dockerfile make image 
