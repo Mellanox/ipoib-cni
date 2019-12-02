@@ -15,17 +15,63 @@ const (
 )
 
 type ipoibManager struct {
+	nLink types.NetlinkManager
+}
+
+type netLink struct {
+}
+
+// LinkByName implements NetlinkManager
+func (n *netLink) LinkByName(name string) (netlink.Link, error) {
+	return netlink.LinkByName(name)
+}
+
+// LinkSetUp using NetlinkManager
+func (n *netLink) LinkSetUp(link netlink.Link) error {
+	return netlink.LinkSetUp(link)
+}
+
+// LinkSetDown using NetlinkManager
+func (n *netLink) LinkSetDown(link netlink.Link) error {
+	return netlink.LinkSetDown(link)
+}
+
+// LinkSetName using NetlinkManager
+func (n *netLink) LinkSetName(link netlink.Link, name string) error {
+	return netlink.LinkSetName(link, name)
+}
+
+// LinkSetNsFd using NetlinkManager
+func (n *netLink) LinkSetNsFd(link netlink.Link, fd int) error {
+	return netlink.LinkSetNsFd(link, fd)
+}
+
+// LinkAdd using NetLinkManager
+func (n *netLink) LinkAdd(link netlink.Link) error {
+	return netlink.LinkAdd(link)
+}
+
+// LinkDel using NetLinkManager
+func (n *netLink) LinkDel(link netlink.Link) error {
+	return netlink.LinkDel(link)
+}
+
+// SetSysVal set value for sysctl attribute
+func (n *netLink) SetSysVal(attribute, value string) (string, error) {
+	return sysctl.Sysctl(attribute, value)
 }
 
 // NewIpoibManager returns an instance of IpoibManager
 func NewIpoibManager() types.Manager {
-	return &ipoibManager{}
+	return &ipoibManager{
+		nLink: &netLink{},
+	}
 }
 
 // CreateIpoibLink create a link in pod netns
 func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netns ns.NetNS) (*current.Interface, error) {
 	iface := &current.Interface{}
-	m, err := netlink.LinkByName(conf.Master)
+	m, err := im.nLink.LinkByName(conf.Master)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup master %q: %v", conf.Master, err)
 	}
@@ -47,34 +93,39 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		Umcast: 1,
 	}
 
-	if err := netlink.LinkAdd(ipoibLink); err != nil {
+	if err := im.nLink.LinkAdd(ipoibLink); err != nil {
 		return nil, fmt.Errorf("failed to create interface: %v", err)
 	}
-	link, err := netlink.LinkByName(tmpName)
+	link, err := im.nLink.LinkByName(tmpName)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
+	if err = im.nLink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
 		return nil, fmt.Errorf("failed to move interfaceee %s to netns: %v", tmpName, err)
 	}
 
 	err = netns.Do(func(_ ns.NetNS) error {
 		ipv4SysctlValueName := fmt.Sprintf(ipV4InterfaceArpProxySysctlTemplate, tmpName)
-		if _, err := sysctl.Sysctl(ipv4SysctlValueName, "1"); err != nil {
+		if _, err := im.nLink.SetSysVal(ipv4SysctlValueName, "1"); err != nil {
 			// remove the newly added link and ignore errors, because we already are in a failed state
-			_ = netlink.LinkDel(ipoibLink)
+			_ = im.nLink.LinkDel(ipoibLink)
 			return fmt.Errorf("failed to set proxy_arp on newly added interface %q: %v", tmpName, err)
 		}
 
-		err := ip.RenameLink(tmpName, ifName)
-		if err != nil {
-			_ = netlink.LinkDel(ipoibLink)
+		if err := im.nLink.LinkSetDown(link); err != nil {
+			return err
+		}
+		if err := im.nLink.LinkSetName(link, ifName); err != nil {
+			_ = im.nLink.LinkDel(ipoibLink)
 			return fmt.Errorf("failed to rename interface to %q: %v", ifName, err)
+		}
+		if err := im.nLink.LinkSetUp(link); err != nil {
+			return err
 		}
 		iface.Name = ifName
 
-		ipoibContLink, err := netlink.LinkByName(ifName)
+		ipoibContLink, err := im.nLink.LinkByName(ifName)
 		if err != nil {
 			return fmt.Errorf("failed to refetch interface %q: %v", ifName, err)
 		}
@@ -90,15 +141,19 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 	return iface, nil
 }
 
-func (im *ipoibManager) RemoveIpoibLink(ifName string, netnsPath string) error {
+func (im *ipoibManager) RemoveIpoibLink(ifName string, netns ns.NetNS) error {
 
 	// There is a netns so try to clean up. Delete can be called multiple times
 	// so don't return an error if the device is already removed.
-	return ns.WithNetNSPath(netnsPath, func(_ ns.NetNS) error {
-		if err := ip.DelLinkByName(ifName); err != nil {
-			if err != ip.ErrLinkNotFound {
-				return err
-			}
+	return netns.Do(func(_ ns.NetNS) error {
+		link, err := im.nLink.LinkByName(ifName)
+		if err != nil {
+			// Link not in the container if cni Add failed
+			return nil
+		}
+
+		if err := im.nLink.LinkDel(link); err != nil {
+			return err
 		}
 		return nil
 	})
