@@ -24,7 +24,7 @@ spec:
       containers:
         - name: kube-ipoib-cni
           image: mellanox/ipoib-cni
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true
           resources:
@@ -68,7 +68,7 @@ spec:
       containers:
         - name: kube-ipoib-cni
           image: mellanox/ipoib-cni:ppc64le
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true
           resources:
