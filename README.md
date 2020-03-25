@@ -1,8 +1,8 @@
-# IP Over Infiniband IPoIB plugin
+# IP Over Infiniband (IPoIB) CNI plugin
 
 ## Overview
 
-Allow user to create IPoIB link and move it to the pod.
+Allow user to create IPoIB child link and move it to the pod.
 
 ## Example configuration
 
