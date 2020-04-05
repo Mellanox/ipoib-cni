@@ -5,7 +5,6 @@ import (
 	"github.com/Mellanox/ipoib-cni/pkg/types"
 	"github.com/Mellanox/ipoib-cni/pkg/types/mocks"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/containernetworking/plugins/pkg/testutils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -25,6 +24,42 @@ func (l *FakeLink) Type() string {
 	return "FakeLink"
 }
 
+// Fake NS - implements ns.NetNS interface
+type fakeNetNS struct {
+	closed bool
+	fd     uintptr
+	path   string
+}
+
+func (f *fakeNetNS) Do(toRun func(ns.NetNS) error) error {
+	return toRun(f)
+}
+
+func (f *fakeNetNS) Set() error {
+	return nil
+}
+
+func (f *fakeNetNS) Path() string {
+	return f.path
+}
+
+func (f *fakeNetNS) Fd() uintptr {
+	return f.fd
+}
+
+func (f *fakeNetNS) Close() error {
+	f.closed = true
+	return nil
+}
+
+func newFakeNs() ns.NetNS {
+	return &fakeNetNS{
+		closed: false,
+		fd:     17,
+		path:   "/proc/4123/ns/net",
+	}
+}
+
 var _ = Describe("IPoIB", func() {
 
 	Context("Checking CreateIpoibLink function", func() {
@@ -41,14 +76,7 @@ var _ = Describe("IPoIB", func() {
 		})
 
 		It("Assuming create link and move it to container", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
+			targetNetNS := newFakeNs()
 
 			mocked := &mocks.NetlinkManager{}
 			fakeLink := &FakeLink{}
@@ -67,15 +95,7 @@ var _ = Describe("IPoIB", func() {
 			Expect(ipoibLink).NotTo(BeNil())
 		})
 		It("Assuming not existing master", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
-
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
 
 			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(nil, errors.New("not found"))
@@ -85,15 +105,7 @@ var _ = Describe("IPoIB", func() {
 			Expect(ipoibLink).To(BeNil())
 		})
 		It("Assuming failed to create link", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
-
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
 			fakeLink := &FakeLink{}
 
@@ -105,15 +117,7 @@ var _ = Describe("IPoIB", func() {
 			Expect(ipoibLink).To(BeNil())
 		})
 		It("Assuming failed to set proxy value", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
-
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
 			fakeLink := &FakeLink{}
 
@@ -128,15 +132,7 @@ var _ = Describe("IPoIB", func() {
 			Expect(ipoibLink).To(BeNil())
 		})
 		It("Assuming failed to change name", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
-
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
 			fakeLink := &FakeLink{}
 
@@ -163,61 +159,35 @@ var _ = Describe("IPoIB", func() {
 		})
 
 		It("Assuming existing interface", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
-
-			Expect(err).NotTo(HaveOccurred())
 
 			fakeLink := &FakeLink{netlink.LinkAttrs{}}
 
 			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(fakeLink, nil)
 			mocked.On("LinkDel", fakeLink).Return(nil)
 			im := ipoibManager{nLink: mocked}
-			err = im.RemoveIpoibLink(ifName, targetNetNS)
+			err := im.RemoveIpoibLink(ifName, targetNetNS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("Assuming non existing interface, failed after add", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
 
 			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(nil, errors.New("not found"))
 			im := ipoibManager{nLink: mocked}
-			err = im.RemoveIpoibLink(ifName, targetNetNS)
+			err := im.RemoveIpoibLink(ifName, targetNetNS)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("Assuming existing interface and failed to remove", func() {
-			var targetNetNS ns.NetNS
-			targetNetNS, err := testutils.NewNS()
-			defer func() {
-				if targetNetNS != nil {
-					targetNetNS.Close()
-				}
-			}()
-			Expect(err).NotTo(HaveOccurred())
+			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}
-
-			Expect(err).NotTo(HaveOccurred())
-
 			fakeLink := &FakeLink{netlink.LinkAttrs{}}
 
 			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(fakeLink, nil)
 			mocked.On("LinkDel", fakeLink).Return(errors.New("failed to remove"))
 			im := ipoibManager{nLink: mocked}
-			err = im.RemoveIpoibLink(ifName, targetNetNS)
+			err := im.RemoveIpoibLink(ifName, targetNetNS)
 			Expect(err).To(HaveOccurred())
 		})
 	})
