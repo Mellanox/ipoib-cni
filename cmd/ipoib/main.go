@@ -3,26 +3,30 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/Mellanox/ipoib-cni/pkg/config"
-	"github.com/Mellanox/ipoib-cni/pkg/ipoib"
-	"github.com/Mellanox/ipoib-cni/pkg/types"
-	"github.com/j-keck/arping"
-	"github.com/vishvananda/netlink"
 	"net"
-
 	"runtime"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/cni/pkg/version"
-
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
+	"github.com/j-keck/arping"
+	"github.com/vishvananda/netlink"
+
+	"github.com/Mellanox/ipoib-cni/pkg/config"
+	"github.com/Mellanox/ipoib-cni/pkg/ipoib"
+	"github.com/Mellanox/ipoib-cni/pkg/types"
 )
 
+const (
+	dhcpType = "dhcp"
+)
+
+//nolint:gochecknoinits
 func init() {
 	runtime.LockOSThread()
 }
@@ -61,21 +65,23 @@ func cmdAdd(args *skel.CmdArgs) error {
 	result := &current.Result{CNIVersion: cniVersion, Interfaces: []*current.Interface{ibLink}}
 
 	if isIpamProvided {
-		if n.IPAM.Type == "dhcp" {
+		if n.IPAM.Type == dhcpType {
 			return fmt.Errorf("ipam dhcp type is not supported")
 		}
-		if err := handleIpamConfig(n, args, netns, result); err != nil {
+		err = handleIpamConfig(n, args, netns, result)
+		if err != nil {
 			return err
 		}
 	} else {
 		// For L2 just change interface status to up
 		err = netns.Do(func(_ ns.NetNS) error {
-			ipoibInterfaceLink, err := netlink.LinkByName(args.IfName)
-			if err != nil {
-				return fmt.Errorf("failed to find interface name %q: %v", ibLink.Name, err)
+			ipoibInterfaceLink, innerErr := netlink.LinkByName(args.IfName)
+			if innerErr != nil {
+				return fmt.Errorf("failed to find interface name %q: %v", ibLink.Name, innerErr)
 			}
 
-			if err := netlink.LinkSetUp(ipoibInterfaceLink); err != nil {
+			err = netlink.LinkSetUp(ipoibInterfaceLink)
+			if err != nil {
 				return fmt.Errorf("failed to set %q UP: %v", args.IfName, err)
 			}
 
@@ -100,7 +106,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	isIpamProvided := n.IPAM.Type != ""
 
 	if isIpamProvided {
-		if n.IPAM.Type == "dhcp" {
+		if n.IPAM.Type == dhcpType {
 			return fmt.Errorf("ipam dhcp type is not supported")
 		}
 		err = ipam.ExecDel(n.IPAM.Type, args.StdinData)
@@ -130,7 +136,6 @@ func main() {
 }
 
 func cmdCheck(args *skel.CmdArgs) error {
-
 	n, _, err := config.LoadConf(args.StdinData)
 	if err != nil {
 		return err
@@ -156,7 +161,8 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return fmt.Errorf("required prevResult missing")
 	}
 
-	if err := version.ParsePrevResult(&n.NetConf); err != nil {
+	err = version.ParsePrevResult(&n.NetConf)
+	if err != nil {
 		return err
 	}
 
@@ -182,16 +188,10 @@ func cmdCheck(args *skel.CmdArgs) error {
 			contIface.Sandbox, args.Netns)
 	}
 
-	m, err := netlink.LinkByName(n.Master)
-	if err != nil {
-		return fmt.Errorf("failed to lookup master %q: %v", n.Master, err)
-	}
-
 	// Check prevResults for ips, routes and dns against values found in the container
 	if err := netns.Do(func(_ ns.NetNS) error {
-
 		// Check interface against values found in the container
-		err := validateCniContainerInterface(contIface, m.Attrs().Index)
+		err := validateCniContainerInterface(contIface)
 		if err != nil {
 			return err
 		}
@@ -213,8 +213,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	return nil
 }
 
-func validateCniContainerInterface(iface current.Interface, parentIndex int) error {
-
+func validateCniContainerInterface(iface current.Interface) error {
 	var link netlink.Link
 	var err error
 
@@ -237,9 +236,9 @@ func validateCniContainerInterface(iface current.Interface, parentIndex int) err
 	return nil
 }
 
-func handleIpamConfig(config *types.NetConf, args *skel.CmdArgs, netns ns.NetNS, result *current.Result) error {
+func handleIpamConfig(netConfig *types.NetConf, args *skel.CmdArgs, netns ns.NetNS, result *current.Result) error {
 	// run the IPAM plugin and get back the config to apply
-	r, err := ipam.ExecAdd(config.IPAM.Type, args.StdinData)
+	r, err := ipam.ExecAdd(netConfig.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -247,7 +246,7 @@ func handleIpamConfig(config *types.NetConf, args *skel.CmdArgs, netns ns.NetNS,
 	// Invoke ipam del if err to avoid ip leak
 	defer func() {
 		if err != nil {
-			_ = ipam.ExecDel(config.IPAM.Type, args.StdinData)
+			_ = ipam.ExecDel(netConfig.IPAM.Type, args.StdinData)
 		}
 	}()
 
@@ -270,13 +269,13 @@ func handleIpamConfig(config *types.NetConf, args *skel.CmdArgs, netns ns.NetNS,
 	}
 
 	err = netns.Do(func(_ ns.NetNS) error {
-		if err := ipam.ConfigureIface(args.IfName, result); err != nil {
-			return err
+		if innerErr := ipam.ConfigureIface(args.IfName, result); innerErr != nil {
+			return innerErr
 		}
 
-		contIface, err := net.InterfaceByName(args.IfName)
-		if err != nil {
-			return fmt.Errorf("failed to look up %q: %v", args.IfName, err)
+		contIface, innerErr := net.InterfaceByName(args.IfName)
+		if innerErr != nil {
+			return fmt.Errorf("failed to look up %q: %v", args.IfName, innerErr)
 		}
 
 		for _, ipc := range result.IPs {

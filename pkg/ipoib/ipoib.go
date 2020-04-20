@@ -2,12 +2,14 @@ package ipoib
 
 import (
 	"fmt"
-	"github.com/Mellanox/ipoib-cni/pkg/types"
+
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/utils/sysctl"
 	"github.com/vishvananda/netlink"
+
+	"github.com/Mellanox/ipoib-cni/pkg/types"
 )
 
 const (
@@ -69,7 +71,8 @@ func NewIpoibManager() types.Manager {
 }
 
 // CreateIpoibLink create a link in pod netns
-func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netns ns.NetNS) (*current.Interface, error) {
+func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netns ns.NetNS) (
+	*current.Interface, error) {
 	iface := &current.Interface{}
 	m, err := im.nLink.LinkByName(conf.Master)
 	if err != nil {
@@ -93,7 +96,7 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		Umcast: 1,
 	}
 
-	if err := im.nLink.LinkAdd(ipoibLink); err != nil {
+	if err = im.nLink.LinkAdd(ipoibLink); err != nil {
 		return nil, fmt.Errorf("failed to create interface: %v", err)
 	}
 	link, err := im.nLink.LinkByName(tmpName)
@@ -107,27 +110,27 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 
 	err = netns.Do(func(_ ns.NetNS) error {
 		ipv4SysctlValueName := fmt.Sprintf(ipV4InterfaceArpProxySysctlTemplate, tmpName)
-		if _, err := im.nLink.SetSysVal(ipv4SysctlValueName, "1"); err != nil {
+		if _, innerErr := im.nLink.SetSysVal(ipv4SysctlValueName, "1"); innerErr != nil {
 			// remove the newly added link and ignore errors, because we already are in a failed state
 			_ = im.nLink.LinkDel(ipoibLink)
-			return fmt.Errorf("failed to set proxy_arp on newly added interface %q: %v", tmpName, err)
+			return fmt.Errorf("failed to set proxy_arp on newly added interface %q: %v", tmpName, innerErr)
 		}
 
-		if err := im.nLink.LinkSetDown(link); err != nil {
-			return err
+		if innerErr := im.nLink.LinkSetDown(link); innerErr != nil {
+			return innerErr
 		}
-		if err := im.nLink.LinkSetName(link, ifName); err != nil {
+		if innerErr := im.nLink.LinkSetName(link, ifName); innerErr != nil {
 			_ = im.nLink.LinkDel(ipoibLink)
-			return fmt.Errorf("failed to rename interface to %q: %v", ifName, err)
+			return fmt.Errorf("failed to rename interface to %q: %v", ifName, innerErr)
 		}
-		if err := im.nLink.LinkSetUp(link); err != nil {
-			return err
+		if innerErr := im.nLink.LinkSetUp(link); innerErr != nil {
+			return innerErr
 		}
 		iface.Name = ifName
 
-		ipoibContLink, err := im.nLink.LinkByName(ifName)
-		if err != nil {
-			return fmt.Errorf("failed to refetch interface %q: %v", ifName, err)
+		ipoibContLink, innerErr := im.nLink.LinkByName(ifName)
+		if innerErr != nil {
+			return fmt.Errorf("failed to refetch interface %q: %v", ifName, innerErr)
 		}
 		iface.Mac = ipoibContLink.Attrs().HardwareAddr.String()
 		iface.Sandbox = netns.Path()
@@ -142,7 +145,6 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 }
 
 func (im *ipoibManager) RemoveIpoibLink(ifName string, netns ns.NetNS) error {
-
 	// There is a netns so try to clean up. Delete can be called multiple times
 	// so don't return an error if the device is already removed.
 	return netns.Do(func(_ ns.NetNS) error {
