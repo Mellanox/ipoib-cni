@@ -2,14 +2,16 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"runtime"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
-	"github.com/containernetworking/cni/pkg/version"
+	cniversion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -24,6 +26,12 @@ import (
 
 const (
 	dhcpType = "dhcp"
+)
+
+var (
+	version = "master@git"
+	commit  = "unknown commit"
+	date    = "unknown date"
 )
 
 //nolint:gochecknoinits
@@ -132,7 +140,24 @@ func cmdDel(args *skel.CmdArgs) error {
 }
 
 func main() {
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("ipoib-cni"))
+	// Init command line flags to clear vendor packages' flags, especially in init()
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	// add version flag
+	versionOpt := false
+	flag.BoolVar(&versionOpt, "version", false, "Show application version")
+	flag.BoolVar(&versionOpt, "v", false, "Show application version")
+	flag.Parse()
+	if versionOpt {
+		fmt.Printf("%s\n", printVersionString())
+		return
+	}
+
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, cniversion.All, bv.BuildString("ipoib-cni"))
+}
+
+func printVersionString() string {
+	return fmt.Sprintf("ipoib-cni version:%s, commit:%s, date:%s", version, commit, date)
 }
 
 func cmdCheck(args *skel.CmdArgs) error {
@@ -161,7 +186,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return fmt.Errorf("required prevResult missing")
 	}
 
-	err = version.ParsePrevResult(&n.NetConf)
+	err = cniversion.ParsePrevResult(&n.NetConf)
 	if err != nil {
 		return err
 	}
