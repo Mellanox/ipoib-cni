@@ -34,6 +34,22 @@ Allow user to create IPoIB child link and move it to the pod.
 * `master` (string, required): name of the host interface to create the link from
 * `ipam` (dictionary, required): IPAM configuration to be used for this network. For interface only without ip address, create empty dictionary, `dhcp` type is not supported.
 
+## Limitations
+
+Traffic between PODs on the same host may not work if you are using inbox driver from the Linux Kernel older than 5.8 or Mellanox OFED older than 5.1.
+
+You can apply a workaround by disabling IPoIB Enhanced mode if you need to stay on a driver version with this limitation.
+
+For inbox drivers:
+* compile kernel with `CONFIG_MLX5_CORE_IPOIB=n`
+
+For Mellanox OFED:
+* set `ipoib_enhanced=0` param for ib_ipoib module (add `options ib_ipoib ipoib_enhanced=0` to `/etc/modprobe.d/ib_ipoib.conf`)
+
+**Note**: disabling IPoIB Enhanced mode can have these implications:
+* larger memory consumption by the Kernel
+* lower traffic bandwidth on IPoIB interfaces (compared to when enhanced mode is enabled)
+
 ## Multi Architecture Support
 The supported architectures:
 * AMD64
