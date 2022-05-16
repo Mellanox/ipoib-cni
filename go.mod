@@ -3,7 +3,7 @@ module github.com/Mellanox/ipoib-cni
 go 1.13
 
 require (
-	github.com/containernetworking/cni v0.7.1
+	github.com/containernetworking/cni v0.8.1
 	github.com/containernetworking/plugins v0.8.3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
