@@ -18,6 +18,7 @@ package ipoib
 
 import (
 	"fmt"
+        "os"
 
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ip"
@@ -100,6 +101,29 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		return nil, err
 	}
 
+        HostPKeyFile := fmt.Sprintf("/sys/class/net/%s/pkey", conf.Master)
+        HostPKeyRead, err := os.ReadFile(HostPKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup master %q pkey: %v", conf.Master, err)
+	}
+        var HostPKey uint16
+        fmt.Sscan(string(HostPKeyRead), &HostPKey)
+
+        HostTransportModeFile := fmt.Sprintf("/sys/class/net/%s/mode", conf.Master)
+        HostTransportModeRead, err := os.ReadFile(HostTransportModeFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup master %q transport mode: %v", conf.Master, err)
+	}
+        var HostTransportModeString string
+        fmt.Sscan(string(HostTransportModeRead), &HostTransportModeString)
+
+        var HostTransportMode netlink.IPoIBMode
+        if HostTransportModeString == "connected" {
+           HostTransportMode = netlink.IPOIB_MODE_CONNECTED
+        } else {
+           HostTransportMode = netlink.IPOIB_MODE_DATAGRAM
+        }
+
 	ipoibLink := &netlink.IPoIB{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        tmpName,
@@ -107,8 +131,10 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 			// Due to kernal bug create the link then move it to the desired namespace
 			//		Namespace:   netlink.NsFd(int(curNetns.Fd())),
 		},
-		Pkey:   0x7fff,
-		Mode:   netlink.IPOIB_MODE_DATAGRAM,
+		//Pkey:   0x7fff,
+                Pkey:   HostPKey,
+                //Mode:   netlink.IPOIB_MODE_DATAGRAM,
+		Mode:   HostTransportMode,
 		Umcast: 1,
 	}
 
