@@ -131,13 +131,7 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 			// Due to kernal bug create the link then move it to the desired namespace
 			//		Namespace:   netlink.NsFd(int(curNetns.Fd())),
 		},
-<<<<<<< HEAD
-		//Pkey:   0x7fff,
-                Pkey:   HostPKey,
-                //Mode:   netlink.IPOIB_MODE_DATAGRAM,
-=======
         Pkey:   HostPKey,
->>>>>>> a06df03 (Read PKey and Transport Mode from parent device)
 		Mode:   HostTransportMode,
 		Umcast: 1,
 	}
