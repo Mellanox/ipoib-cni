@@ -18,7 +18,7 @@ package ipoib
 
 import (
 	"fmt"
-    "os"
+        "os"
 
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ip"
@@ -101,28 +101,28 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		return nil, err
 	}
 
-    HostPKeyFile := fmt.Sprintf("/sys/class/net/%s/pkey", conf.Master)
-    HostPKeyRead, err := os.ReadFile(HostPKeyFile)
-	if err != nil {
-        HostPKeyRead = []byte("0x7fff")
-	}
-    var HostPKey uint16
-    fmt.Sscan(string(HostPKeyRead), &HostPKey)
-    
-    HostTransportModeFile := fmt.Sprintf("/sys/class/net/%s/mode", conf.Master)
-    HostTransportModeRead, err := os.ReadFile(HostTransportModeFile)
-	if err != nil {
-        HostTransportModeRead = []byte("datagram")
-	}
-    var HostTransportModeString string
-    fmt.Sscan(string(HostTransportModeRead), &HostTransportModeString)
-    
-    var HostTransportMode netlink.IPoIBMode
-    if HostTransportModeString == "connected" {
-        HostTransportMode = netlink.IPOIB_MODE_CONNECTED
-    } else {
-        HostTransportMode = netlink.IPOIB_MODE_DATAGRAM
-    }
+        HostPKeyFile := fmt.Sprintf("/sys/class/net/%s/pkey", conf.Master)
+        HostPKeyRead, err := os.ReadFile(HostPKeyFile)
+                if err != nil {
+                        HostPKeyRead = []byte("0x7fff")
+                }
+        var HostPKey uint16
+        fmt.Sscan(string(HostPKeyRead), &HostPKey)
+        
+        HostTransportModeFile := fmt.Sprintf("/sys/class/net/%s/mode", conf.Master)
+        HostTransportModeRead, err := os.ReadFile(HostTransportModeFile)
+                if err != nil {
+                        HostTransportModeRead = []byte("datagram")
+                }
+        var HostTransportModeString string
+        fmt.Sscan(string(HostTransportModeRead), &HostTransportModeString)
+        
+        var HostTransportMode netlink.IPoIBMode
+        if HostTransportModeString == "connected" {
+                HostTransportMode = netlink.IPOIB_MODE_CONNECTED
+        } else {
+                HostTransportMode = netlink.IPOIB_MODE_DATAGRAM
+        }
 
 	ipoibLink := &netlink.IPoIB{
 		LinkAttrs: netlink.LinkAttrs{
@@ -131,9 +131,9 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 			// Due to kernal bug create the link then move it to the desired namespace
 			//		Namespace:   netlink.NsFd(int(curNetns.Fd())),
 		},
-        Pkey:   HostPKey,
-        Mode:   HostTransportMode,
-        Umcast: 1,
+                Pkey:   HostPKey,
+                Mode:   HostTransportMode,
+                Umcast: 1,
 	}
 
 	if err = im.nLink.LinkAdd(ipoibLink); err != nil {
