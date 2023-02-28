@@ -90,10 +90,23 @@ func NewIpoibManager() types.Manager {
 func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netns ns.NetNS) (
 	*current.Interface, error) {
 	iface := &current.Interface{}
-	m, err := im.nLink.LinkByName(conf.Master)
+	lnk, err := im.nLink.LinkByName(conf.Master)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup master %q: %v", conf.Master, err)
 	}
+
+	if lnk.Type() != "ipoib" {
+		return nil, fmt.Errorf("master device is (%s) not of type ipoib", lnk.Type())
+	}
+
+	ipoibLnk, ok := lnk.(*netlink.IPoIB)
+	if !ok {
+		return nil, fmt.Errorf("unexpected error, failed to convert to ipoib netlink interface")
+	}
+
+	// partition key is 15 bits
+	pkey := ipoibLnk.Pkey & 0x7fff
+	mode := ipoibLnk.Mode
 
 	tmpName, err := ip.RandomVethName()
 	if err != nil {
@@ -103,12 +116,12 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 	ipoibLink := &netlink.IPoIB{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        tmpName,
-			ParentIndex: m.Attrs().Index,
+			ParentIndex: lnk.Attrs().Index,
 			// Due to kernal bug create the link then move it to the desired namespace
 			//		Namespace:   netlink.NsFd(int(curNetns.Fd())),
 		},
-		Pkey:   0x7fff,
-		Mode:   netlink.IPOIB_MODE_DATAGRAM,
+		Pkey:   pkey,
+		Mode:   mode,
 		Umcast: 1,
 	}
 
@@ -121,7 +134,7 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 	}
 
 	if err = im.nLink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
-		return nil, fmt.Errorf("failed to move interfaceee %s to netns: %v", tmpName, err)
+		return nil, fmt.Errorf("failed to move interface %s to netns: %v", tmpName, err)
 	}
 
 	err = netns.Do(func(_ ns.NetNS) error {
