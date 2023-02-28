@@ -1,0 +1,8 @@
+# Folders
+.gopath/
+.idea/
+bin/
+build/
+
+# Files
+ipoib-cni.cover

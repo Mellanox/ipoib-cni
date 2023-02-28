@@ -26,7 +26,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cniTypes "github.com/containernetworking/cni/pkg/types"
-	"github.com/containernetworking/cni/pkg/types/current"
+	current "github.com/containernetworking/cni/pkg/types/100"
 	cniversion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ipam"
@@ -169,7 +169,8 @@ func main() {
 		return
 	}
 
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, cniversion.All, bv.BuildString("ipoib-cni"))
+	skel.PluginMain(cmdAdd, cmdCheck, cmdDel,
+		cniversion.PluginSupports("0.1.0", "0.2.0", "0.3.0", "0.3.1", "0.4.0"), bv.BuildString("ipoib-cni"))
 }
 
 func printVersionString() string {
@@ -320,7 +321,7 @@ func handleIpamConfig(netConfig *types.NetConf, args *skel.CmdArgs, netns ns.Net
 		}
 
 		for _, ipc := range result.IPs {
-			if ipc.Version == "4" {
+			if ipc.Address.IP.To4() != nil {
 				_ = arping.GratuitousArpOverIface(ipc.Address.IP, *contIface)
 			}
 		}
