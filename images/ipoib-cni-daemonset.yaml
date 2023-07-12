@@ -16,7 +16,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: kube-ipoib-cni-ds-amd64
+  name: kube-ipoib-cni-ds
   namespace: kube-system
   labels:
     tier: node
@@ -33,63 +33,16 @@ spec:
         name: ipoib-cni
     spec:
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
-      containers:
-        - name: kube-ipoib-cni
-          image: mellanox/ipoib-cni
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            privileged: true
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "50Mi"
-            limits:
-              cpu: "100m"
-              memory: "50Mi"
-          volumeMounts:
-            - name: cnibin
-              mountPath: /host/opt/cni/bin
-      volumes:
-        - name: cnibin
-          hostPath:
-            path: /opt/cni/bin
-
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: kube-ipoib-cni-ds-ppc64le
-  namespace: kube-system
-  labels:
-    tier: node
-    app: ipoib-cni
-spec:
-  selector:
-    matchLabels:
-      name: ipoib-cni
-  template:
-    metadata:
-      labels:
-        tier: node
-        app: ipoib-cni
-        name: ipoib-cni
-    spec:
-      hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: ppc64le
-      tolerations:
-        - key: node-role.kubernetes.io/master
+        - key: node-role.kubernetes.io/control-plane
           operator: Exists
           effect: NoSchedule
       containers:
         - name: kube-ipoib-cni
-          image: mellanox/ipoib-cni:ppc64le
+          image: ghcr.io/Mellanox/ipoib-cni:latest
           imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true
