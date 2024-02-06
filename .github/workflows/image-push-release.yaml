@@ -1,8 +1,5 @@
 name: "push images on release"
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
-
 on:
   push:
     tags:
@@ -10,8 +7,12 @@ on:
 jobs:
   build-and-push-ipoib-cni:
     runs-on: ubuntu-22.04
-    name: image push AMD64
+    name: image push
     steps:
+      - name: Set repository as lower-case output variable
+        id: repo_name
+        run: echo ::set-output name=repository::$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+
       - name: check out the repo
         uses: actions/checkout@v3
 
@@ -29,7 +30,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ghcr.io/${{ steps.repo_name.outputs.repository }}
           tags: |
             type=ref,event=tag
 

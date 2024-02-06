@@ -1,8 +1,5 @@
 name: "push images on merge to master"
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
-
 on:
   push:
     branches:
@@ -12,6 +9,9 @@ jobs:
     name: image push
     runs-on: ubuntu-22.04
     steps:
+      - name: Set repository as lower-case output variable
+        id: repo_name
+        run: echo ::set-output name=repository::$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
       - name: check out the repo
         uses: actions/checkout@v3
 
@@ -32,6 +32,6 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/ppc64le
           tags: |
-            ${{ env.IMAGE_NAME }}
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/${{ steps.repo_name.outputs.repository }}
+            ghcr.io/${{ steps.repo_name.outputs.repository }}:${{ github.sha }}
           file: ./Dockerfile
