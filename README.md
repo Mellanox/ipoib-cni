@@ -50,16 +50,7 @@ For Mellanox OFED:
 * larger memory consumption by the Kernel
 * lower traffic bandwidth on IPoIB interfaces (compared to when enhanced mode is enabled)
 
-## Multi Architecture Support
-The supported architectures:
-* AMD64
-* PPC64LE
-
-Buiding image for AMD64:
+Buiding image:
 ```
-$ DOCKERFILE=Dockerfile make image 
-```
-Buiding image for PPC64LE:
-```
-$ DOCKERFILE=Dockerfile.ppc64le make image        
+$ make image
 ```
