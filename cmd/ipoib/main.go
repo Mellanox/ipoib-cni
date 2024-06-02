@@ -170,7 +170,7 @@ func main() {
 	}
 
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel,
-		cniversion.PluginSupports("0.1.0", "0.2.0", "0.3.0", "0.3.1", "0.4.0"), bv.BuildString("ipoib-cni"))
+		cniversion.All, bv.BuildString("ipoib-cni"))
 }
 
 func printVersionString() string {
