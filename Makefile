@@ -3,17 +3,12 @@ BINARY_NAME=ipoib
 PACKAGE=ipoib-cni
 ORG_PATH=github.com/Mellanox
 REPO_PATH=$(ORG_PATH)/$(PACKAGE)
-GOPATH=$(CURDIR)/.gopath
 BINDIR =$(CURDIR)/bin
-GOBIN =$(CURDIR)/bin
 BUILDDIR=$(CURDIR)/build
-BASE=$(GOPATH)/src/$(REPO_PATH)
-GOFILES=$(shell find . -name *.go | grep -vE "(\/vendor\/)|(_test.go)")
-PKGS=$(or $(PKG),$(shell cd $(BASE) && env GOPATH=$(GOPATH) $(GO) list ./... | grep -v "^$(PACKAGE)/vendor/"))
-TESTPKGS = $(shell env GOPATH=$(GOPATH) $(GO) list -f '{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' $(PKGS))
-
-export GOPATH
-export GOBIN
+BASE=$(CURDIR)
+GOFILES=$(shell find . -name *.go | grep -vE "(_test.go)")
+PKGS=$(or $(PKG),$(shell $(GO) list ./...))
+TESTPKGS = $(shell $(GO) list -f '{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' $(PKGS))
 
 # Version
 VERSION?=master
@@ -24,7 +19,7 @@ LDFLAGS="-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE
 # Docker
 IMAGE_BUILDER?=@docker
 IMAGEDIR=$(BASE)/images
-DOCKERFILE?=$(CURDIR)/Dockerfile
+DOCKERFILE?=$(BASE)/Dockerfile
 TAG?=mellanox/ipoib-cni
 IMAGE_BUILD_OPTS?=
 # Accept proxy settings for docker
@@ -40,7 +35,7 @@ IMAGE_BUILD_OPTS += $(DOCKERARGS)
 
 # Go tools
 GO      = go
-GOLANGCI_LINT = $(GOBIN)/golangci-lint
+GOLANGCI_LINT = $(BINDIR)/golangci-lint
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
@@ -51,15 +46,11 @@ Q = $(if $(filter 1,$V),,@)
 .PHONY: all
 all: lint build
 
-$(BASE): ; $(info  setting GOPATH...)
-	@mkdir -p $(dir $@)
-	@ln -sf $(CURDIR) $@
-
-$(GOBIN):
+$(BINDIR):
 	@mkdir -p $@
 
-$(BUILDDIR): | $(BASE) ; $(info Creating build directory...)
-	@cd $(BASE) && mkdir -p $@
+$(BUILDDIR): ; $(info Creating build directory...)
+	@mkdir -p $@
 
 build: $(BUILDDIR)/$(BINARY_NAME) ; $(info Building $(BINARY_NAME)...) ## Build executable file
 	$(info Done!)
@@ -69,57 +60,49 @@ $(BUILDDIR)/$(BINARY_NAME): $(GOFILES) | $(BUILDDIR)
 
 # Tools
 
-$(GOLANGCI_LINT): | $(BASE) ; $(info  building golangci-lint...)
-	$Q curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VER)
+$(GOLANGCI_LINT): | $(BINDIR) ; $(info  building golangci-lint...)
+	$Q GOBIN=$(BINDIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
-GOVERALLS = $(GOBIN)/goveralls
-$(GOBIN)/goveralls: | $(BASE) ; $(info  building goveralls...)
-	$Q go get github.com/mattn/goveralls
+GOVERALLS = $(BINDIR)/goveralls
+$(BINDIR)/goveralls: | $(BINDIR) ; $(info  building goveralls...)
+	$Q GOBIN=$(BINDIR) go install github.com/mattn/goveralls@latest
 
 HADOLINT_TOOL = $(BINDIR)/hadolint
-$(HADOLINT_TOOL): | $(BASE) ; $(info  installing hadolint...)
+$(HADOLINT_TOOL): | $(BINDIR) ; $(info  installing hadolint...)
 	$(call wget-install-tool,$(HADOLINT_TOOL),"https://github.com/hadolint/hadolint/releases/download/v2.12.1-beta/hadolint-Linux-x86_64")
 
 SHELLCHECK_TOOL = $(BINDIR)/shellcheck
-$(SHELLCHECK_TOOL): | $(BASE) ; $(info  installing shellcheck...)
+$(SHELLCHECK_TOOL): | $(BINDIR) ; $(info  installing shellcheck...)
 	$(call install-shellcheck,$(BINDIR),"https://github.com/koalaman/shellcheck/releases/download/v0.9.0/shellcheck-v0.9.0.linux.x86_64.tar.xz")
 
 # Tests
 
 .PHONY: lint
 lint: | $(BASE) $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-lint
-	$Q mkdir -p $(BASE)/test
-	$Q cd $(BASE) && ret=0 && \
-		test -z "$$($(GOLANGCI_LINT) run | tee $(BASE)/test/lint.out)" || ret=1 ; \
-		cat $(BASE)/test/lint.out ; rm -rf $(BASE)/test ; \
-	 exit $$ret
+	$Q $(GOLANGCI_LINT) run --timeout=5m
 
 TEST_TARGETS := test-default test-bench test-short test-verbose test-race
-.PHONY: $(TEST_TARGETS) test-xml check test tests
+.PHONY: $(TEST_TARGETS) test tests
 test-bench:   ARGS=-run=__absolutelynothing__ -bench=. ## Run benchmarks
 test-short:   ARGS=-short        ## Run only short tests
 test-verbose: ARGS=-v            ## Run tests in verbose mode with coverage reporting
 test-race:    ARGS=-race         ## Run tests with race detector
 $(TEST_TARGETS): NAME=$(MAKECMDGOALS:test-%=%)
 $(TEST_TARGETS): test
-check test tests: lint | $(BASE) ; $(info  running $(NAME:%=% )tests...) @ ## Run tests
-	$Q cd $(BASE) && $(GO) test -timeout $(TIMEOUT)s $(ARGS) $(TESTPKGS)
-
-test-xml: lint | $(BASE) $(GO2XUNIT) ; $(info  running $(NAME:%=% )tests...) @ ## Run tests with xUnit output
-	$Q cd $(BASE) && 2>&1 $(GO) test -timeout 20s -v $(TESTPKGS) | tee test/tests.output
-	$(GO2XUNIT) -fail -input test/tests.output -output test/tests.xml
+test tests: lint ; $(info  running $(NAME:%=% )tests...) @ ## Run tests
+	$Q $(GO) test -timeout $(TIMEOUT)s $(ARGS) $(TESTPKGS)
 
 COVERAGE_MODE = count
 .PHONY: test-coverage test-coverage-tools
 test-coverage-tools: | $(GOVERALLS)
-test-coverage: COVERAGE_DIR := $(CURDIR)/test
+test-coverage: COVERAGE_DIR := $(BASE)/test
 test-coverage: test-coverage-tools | $(BASE) ; $(info  running coverage tests...) @ ## Run coverage tests
-	$Q cd $(BASE); $(GO) test -covermode=$(COVERAGE_MODE) -coverprofile=ipoib-cni.cover ./...
+	$Q $(GO) test -covermode=$(COVERAGE_MODE) -coverprofile=ipoib-cni.cover ./...
 
 # Container image
 .PHONY: image
 image: | $(BASE) ; $(info Building Docker image...)  ## Build conatiner image
-	$(IMAGE_BUILDER) build -t $(TAG) -f $(DOCKERFILE)  $(CURDIR) $(IMAGE_BUILD_OPTS)
+	$(IMAGE_BUILDER) build -t $(TAG) -f $(DOCKERFILE)  $(BASE) $(IMAGE_BUILD_OPTS)
 
 .PHONY: hadolint
 hadolint: $(BASE) $(HADOLINT_TOOL); $(info  running hadolint...) @ ## Run hadolint
@@ -129,12 +112,14 @@ hadolint: $(BASE) $(HADOLINT_TOOL); $(info  running hadolint...) @ ## Run hadoli
 shellcheck: $(BASE) $(SHELLCHECK_TOOL); $(info  running shellcheck...) @ ## Run shellcheck
 	$Q $(SHELLCHECK_TOOL) images/entrypoint.sh
 
+tests: lint hadolint shellcheck test ## Run lint, hadolint, shellcheck, unit test
+
 # Misc
 
 .PHONY: clean
 clean: ; $(info  Cleaning...)	 ## Cleanup everything
-	@rm -rf $(GOPATH)
 	@rm -rf $(BUILDDIR)
+	@rm -rf $(BINDIR)
 	@rm -rf  test
 
 .PHONY: help
