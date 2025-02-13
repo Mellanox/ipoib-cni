@@ -3,7 +3,7 @@ module github.com/Mellanox/ipoib-cni
 go 1.20
 
 require (
-	github.com/containernetworking/cni v1.1.2
+	github.com/containernetworking/cni v1.2.3
 	github.com/containernetworking/plugins v1.5.0
 	github.com/j-keck/arping v1.0.3
 	github.com/onsi/ginkgo/v2 v2.19.0
