@@ -169,7 +169,7 @@ func main() {
 		return
 	}
 
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel,
+	skel.PluginMainFuncs(skel.CNIFuncs{Add: cmdAdd, Check: cmdCheck, Del: cmdDel},
 		cniversion.All, bv.BuildString("ipoib-cni"))
 }
 
@@ -233,7 +233,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	// Check prevResults for ips, routes and dns against values found in the container
 	if err := netns.Do(func(_ ns.NetNS) error {
 		// Check interface against values found in the container
-		err := validateCniContainerInterface(contIface)
+		err := validateCniContainerInterface(&contIface)
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	return nil
 }
 
-func validateCniContainerInterface(iface current.Interface) error {
+func validateCniContainerInterface(iface *current.Interface) error {
 	var link netlink.Link
 	var err error
 
