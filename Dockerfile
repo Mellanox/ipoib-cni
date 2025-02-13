@@ -5,7 +5,7 @@ COPY . /usr/src/ipoib-cni
 ENV HTTP_PROXY $http_proxy
 ENV HTTPS_PROXY $https_proxy
 
-RUN apk add --no-cache --virtual build-dependencies build-base=~0.5 linux-headers=~6.5
+RUN apk add --no-cache --virtual build-dependencies build-base linux-headers
 WORKDIR /usr/src/ipoib-cni
 RUN make clean && \
     make build
