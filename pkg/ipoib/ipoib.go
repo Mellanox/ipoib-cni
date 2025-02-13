@@ -105,6 +105,7 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 	}
 
 	// partition key is 15 bits
+	//nolint:mnd
 	pkey := ipoibLnk.Pkey & 0x7fff
 	mode := ipoibLnk.Mode
 
