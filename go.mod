@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/stretchr/testify v1.10.0
-	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netlink v1.3.0
 )
 
 require (
