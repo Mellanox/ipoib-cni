@@ -1,6 +1,5 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Mellanox/ipoib-cni)](https://goreportcard.com/report/github.com/Mellanox/ipoib-cni)
-[![Build Status](https://travis-ci.com/Mellanox/ipoib-cni.svg?branch=master)](https://travis-ci.com/Mellanox/ipoib-cni)
 [![Coverage Status](https://coveralls.io/repos/github/Mellanox/ipoib-cni/badge.svg)](https://coveralls.io/github/Mellanox/ipoib-cni)
 
 # IP Over Infiniband (IPoIB) CNI plugin
