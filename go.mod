@@ -7,7 +7,7 @@ require (
 	github.com/containernetworking/plugins v1.6.2
 	github.com/j-keck/arping v1.0.3
 	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.36.3
+	github.com/onsi/gomega v1.37.0
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.0
 )
