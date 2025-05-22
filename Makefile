@@ -1,4 +1,3 @@
-include make/licence.mk
 # Package related
 BINARY_NAME=ipoib
 PACKAGE=ipoib-cni
