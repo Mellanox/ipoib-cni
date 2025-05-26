@@ -1,4 +1,4 @@
-# Copyright 2025 ipoib-cni authors
+# Copyright 2025 NVIDIA CORPORATION & AFFILIATES
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,12 +26,13 @@ WORKDIR /usr/src/ipoib-cni
 RUN make clean && \
     make build
 
-FROM alpine:3
+FROM nvcr.io/nvidia/doca/doca:3.0.0-base-rt-host
 COPY --from=builder /usr/src/ipoib-cni/build/ipoib /usr/bin/
 WORKDIR /
 
 LABEL io.k8s.display-name="IPoIB CNI"
 
 COPY ./images/entrypoint.sh /
+COPY . /src
 
 ENTRYPOINT ["/entrypoint.sh"]
