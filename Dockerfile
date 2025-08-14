@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-FROM golang:1.24-alpine as builder
+FROM golang:1.25-alpine as builder
 
 COPY . /usr/src/ipoib-cni
 
