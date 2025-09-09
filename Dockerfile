@@ -16,6 +16,9 @@
 
 FROM golang:1.25-alpine as builder
 
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
+
 COPY . /usr/src/ipoib-cni
 
 ENV HTTP_PROXY $http_proxy
