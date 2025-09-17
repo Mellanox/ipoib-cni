@@ -33,6 +33,7 @@ ifdef HTTPS_PROXY
 	DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
 endif
 IMAGE_BUILD_OPTS += $(DOCKERARGS)
+GOPROXY ?= $(shell go env GOPROXY)
 
 # Go tools
 GO      = go
@@ -103,7 +104,7 @@ test-coverage: test-coverage-tools | $(BASE) ; $(info  running coverage tests...
 # Container image
 .PHONY: image
 image: | $(BASE) ; $(info Building Docker image...)  ## Build conatiner image
-	$(IMAGE_BUILDER) build -t $(TAG) -f $(DOCKERFILE)  $(BASE) $(IMAGE_BUILD_OPTS)
+	$(IMAGE_BUILDER) build -t $(TAG) -f $(DOCKERFILE) $(BASE) --build-arg GOPROXY="$(GOPROXY)" $(IMAGE_BUILD_OPTS)
 
 .PHONY: hadolint
 hadolint: $(BASE) $(HADOLINT_TOOL); $(info  running hadolint...) @ ## Run hadolint
