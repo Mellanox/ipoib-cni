@@ -29,7 +29,12 @@ WORKDIR /usr/src/ipoib-cni
 RUN make clean && \
     make build
 
-FROM nvcr.io/nvidia/doca/doca:3.1.0-base-rt-host
+FROM nvcr.io/nvidia/distroless/go:v3.1.12-dev
+
+USER 0:0
+SHELL ["/busybox/sh", "-c"]
+RUN ln -s /busybox/sh /bin/sh
+
 COPY --from=builder /usr/src/ipoib-cni/build/ipoib /usr/bin/
 WORKDIR /
 
