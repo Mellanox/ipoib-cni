@@ -29,7 +29,7 @@ WORKDIR /usr/src/ipoib-cni
 RUN make clean && \
     make build
 
-FROM nvcr.io/nvidia/distroless/go:v3.2.0-dev
+FROM nvcr.io/nvidia/distroless/go:v3.2.1-dev
 
 USER 0:0
 SHELL ["/busybox/sh", "-c"]
