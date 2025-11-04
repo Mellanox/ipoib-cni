@@ -14,6 +14,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+ARG BASE_IMAGE_GO_DISTROLESS_DEV
+
 FROM golang:1.25-alpine as builder
 
 ARG GOPROXY
@@ -29,7 +31,7 @@ WORKDIR /usr/src/ipoib-cni
 RUN make clean && \
     make build
 
-FROM nvcr.io/nvidia/distroless/go:v3.2.0-dev
+FROM ${BASE_IMAGE_GO_DISTROLESS_DEV:-nvcr.io/nvidia/distroless/go:v3.2.1-dev}
 
 USER 0:0
 SHELL ["/busybox/sh", "-c"]
