@@ -67,7 +67,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", netns, err)
 	}
-	defer netns.Close()
+	defer func() { _ = netns.Close() }()
 
 	ipoibManager := ipoib.NewIpoibManager()
 
@@ -148,7 +148,7 @@ func cmdDel(args *skel.CmdArgs) error {
 
 		return fmt.Errorf("failed to open netns %s: %q", netns, err)
 	}
-	defer netns.Close()
+	defer func() { _ = netns.Close() }()
 
 	ipoibManager := ipoib.NewIpoibManager()
 
@@ -188,7 +188,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
 	}
-	defer netns.Close()
+	defer func() { _ = netns.Close() }()
 
 	if isIpamProvided {
 		// run the IPAM plugin and get back the config to apply
@@ -199,7 +199,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	}
 
 	// Parse previous result.
-	if n.NetConf.RawPrevResult == nil {
+	if n.RawPrevResult == nil {
 		return fmt.Errorf("required prevResult missing")
 	}
 
