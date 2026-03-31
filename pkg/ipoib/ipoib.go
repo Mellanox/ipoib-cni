@@ -36,8 +36,7 @@ type ipoibManager struct {
 	nLink types.NetlinkManager
 }
 
-type netLink struct {
-}
+type netLink struct{}
 
 // LinkByName implements NetlinkManager
 func (n *netLink) LinkByName(name string) (netlink.Link, error) {
@@ -88,7 +87,8 @@ func NewIpoibManager() types.Manager {
 
 // CreateIpoibLink create a link in pod netns
 func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netns ns.NetNS) (
-	*current.Interface, error) {
+	*current.Interface, error,
+) {
 	iface := &current.Interface{}
 	lnk, err := im.nLink.LinkByName(conf.Master)
 	if err != nil {
@@ -134,7 +134,8 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		return nil, err
 	}
 
-	if err = im.nLink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
+	fd := int(netns.Fd()) //nolint:gosec // fd values fit in int
+	if err = im.nLink.LinkSetNsFd(link, fd); err != nil {
 		return nil, fmt.Errorf("failed to move interface %s to netns: %v", tmpName, err)
 	}
 
@@ -180,13 +181,9 @@ func (im *ipoibManager) RemoveIpoibLink(ifName string, netns ns.NetNS) error {
 	return netns.Do(func(_ ns.NetNS) error {
 		link, err := im.nLink.LinkByName(ifName)
 		if err != nil {
-			// Link not in the container if cni Add failed
-			return nil
+			return nil //nolint:nilerr // link not present in container, nothing to delete
 		}
 
-		if err := im.nLink.LinkDel(link); err != nil {
-			return err
-		}
-		return nil
+		return im.nLink.LinkDel(link)
 	})
 }

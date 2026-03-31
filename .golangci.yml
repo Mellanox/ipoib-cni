@@ -1,98 +1,111 @@
-linters-settings:
-  dupl:
-    threshold: 150
-  funlen:
-    lines: 100
-    statements: 50
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-      - unnamedResult
-  gocognit:
-    min-complexity: 30
-  goimports:
-    local-prefixes: github.com/Mellanox/ipoib-cni
-  gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: [argument,case,condition,return]
-  govet:
-    check-shadowing: true
-    settings:
-      printf:
-        funcs:
-          - (github.com/rs/zerolog/zerolog.Event).Msgf
-  lll:
-    line-length: 120
-  misspell:
-    locale: US
-  prealloc:
-    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
-    # True by default.
-    simple: true
-    range-loops: true # Report preallocation suggestions on range loops, true by default
-    for-loops: false # Report preallocation suggestions on for loops, false by default
+version: "2"
+
+run:
+  modules-download-mode: readonly
+  tests: false
 
 linters:
-  disable-all: true
+  default: none
   enable:
+    - asasalint
+    - asciicheck
+    - bidichk
     - bodyclose
+    - containedctx
+    - contextcheck
+    - decorder
     - dogsled
-    - dupl
+    - durationcheck
     - errcheck
-    - copyloopvar
+    - errchkjson
+    - errname
+    - fatcontext
     - funlen
-    - gochecknoinits
+    - ginkgolinter
     - goconst
     - gocritic
-    - gocognit
-    - gofmt
-    - goimports
-    - mnd
+    - gocyclo
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
+    - grouper
+    - importas
     - ineffassign
+    - interfacebloat
+    - intrange
     - lll
+    - loggercheck
+    - maintidx
+    - makezero
     - misspell
     - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
     - prealloc
+    - predeclared
+    - promlinter
+    - reassign
     - revive
+    - rowserrcheck
+    - sloglint
     - staticcheck
-    - stylecheck
-    - typecheck
+    - tagalign
+    - thelper
+    - tparallel
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - wastedassign
     - whitespace
+  settings:
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocyclo:
+      min-complexity: 30
+    lll:
+      line-length: 120
+    misspell:
+      locale: US
+    staticcheck:
+      checks: ["all", "-ST1000"]
+      dot-import-whitelist:
+        - github.com/onsi/ginkgo/v2
+        - github.com/onsi/ginkgo/v2/extensions/table
+        - github.com/onsi/gomega
+        - github.com/onsi/gomega/gstruct
+    gocritic:
+      disabled-checks:
+        - appendAssign
+    revive:
+      rules:
+        - name: package-comments
+          severity: warning
+          disabled: true
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+          - gosec
+          - revive
+          - errcheck
 
-issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - revive
-        - stylecheck
-      text: "should not use dot imports"
-    - path: _test\.go
-      linters:
-        - mnd
-        - goconst
-    - text: "Magic number: 1"
-      linters:
-        - mnd
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes: github.com/Mellanox/ipoib-cni
+  exclusions:
+    generated: lax

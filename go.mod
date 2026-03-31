@@ -1,6 +1,6 @@
 module github.com/Mellanox/ipoib-cni
 
-go 1.24.11
+go 1.25
 
 require (
 	github.com/containernetworking/cni v1.3.0
