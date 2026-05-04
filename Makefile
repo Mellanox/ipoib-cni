@@ -51,11 +51,15 @@ $(BINDIR):
 $(BUILDDIR): ; $(info Creating build directory...)
 	@mkdir -p $@
 
-build: $(BUILDDIR)/$(BINARY_NAME) ; $(info Building $(BINARY_NAME)...) ## Build executable file
+build: $(BUILDDIR)/$(BINARY_NAME) build-entrypoint ; $(info Building $(BINARY_NAME)...) ## Build executable file
 	$(info Done!)
 
 $(BUILDDIR)/$(BINARY_NAME): $(GOFILES) | $(BUILDDIR)
 	@cd $(BASE)/cmd/$(BINARY_NAME) && CGO_ENABLED=0 $(GO) build -o $(BUILDDIR)/$(BINARY_NAME) -tags no_openssl -ldflags $(LDFLAGS)  -v
+
+.PHONY: build-entrypoint
+build-entrypoint: | $(BUILDDIR) ; $(info Building entrypoint...) ## Build entrypoint binary
+	$Q CGO_ENABLED=0 $(GO) build -o $(BUILDDIR)/entrypoint -tags no_openssl ./cmd/entrypoint/
 
 # Tools
 
@@ -72,10 +76,6 @@ $(BINDIR)/goveralls: | $(BINDIR) ; $(info  building goveralls...)
 HADOLINT_TOOL = $(BINDIR)/hadolint
 $(HADOLINT_TOOL): | $(BINDIR) ; $(info  installing hadolint...)
 	$(call wget-install-tool,$(HADOLINT_TOOL),"https://github.com/hadolint/hadolint/releases/download/v2.12.1-beta/hadolint-Linux-x86_64")
-
-SHELLCHECK_TOOL = $(BINDIR)/shellcheck
-$(SHELLCHECK_TOOL): | $(BINDIR) ; $(info  installing shellcheck...)
-	$(call install-shellcheck,$(BINDIR),"https://github.com/koalaman/shellcheck/releases/download/v0.9.0/shellcheck-v0.9.0.linux.x86_64.tar.xz")
 
 # Tests
 
@@ -110,11 +110,7 @@ image: | $(BASE) ; $(info Building Docker image...)  ## Build conatiner image
 hadolint: $(BASE) $(HADOLINT_TOOL); $(info  running hadolint...) @ ## Run hadolint
 	$Q $(HADOLINT_TOOL) Dockerfile
 
-.PHONY: shellcheck
-shellcheck: $(BASE) $(SHELLCHECK_TOOL); $(info  running shellcheck...) @ ## Run shellcheck
-	$Q $(SHELLCHECK_TOOL) images/entrypoint.sh
-
-tests: lint hadolint shellcheck test ## Run lint, hadolint, shellcheck, unit test
+tests: lint hadolint test ## Run lint, hadolint, unit test
 
 # Misc
 
@@ -138,15 +134,3 @@ chmod +x $(1) ;\
 }
 endef
 
-define install-shellcheck
-@[ -f $(1) ] || { \
-echo "Downloading $(2)" ;\
-mkdir -p $(1);\
-wget -O $(1)/shellcheck.tar.xz $(2);\
-tar xf $(1)/shellcheck.tar.xz -C $(1);\
-mv $(1)/shellcheck*/shellcheck $(1)/shellcheck;\
-chmod +x $(1)/shellcheck;\
-rm -r $(1)/shellcheck*/;\
-rm $(1)/shellcheck.tar.xz;\
-}
-endef

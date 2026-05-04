@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-ARG BASE_IMAGE_GO_DISTROLESS_DEV
+ARG BASE_IMAGE_GO_DISTROLESS
 
 FROM golang:1.26-alpine as builder
 
@@ -28,21 +28,18 @@ ENV HTTPS_PROXY $https_proxy
 
 RUN apk add --no-cache --virtual build-dependencies build-base linux-headers
 WORKDIR /usr/src/ipoib-cni
-RUN make clean && \
-    make build
+RUN make clean && make build
 
-FROM ${BASE_IMAGE_GO_DISTROLESS_DEV:-nvcr.io/nvidia/distroless/go:v3.2.1-dev}
+FROM ${BASE_IMAGE_GO_DISTROLESS:-nvcr.io/nvidia/distroless/go:v3.2.1}
 
 USER 0:0
-SHELL ["/busybox/sh", "-c"]
-RUN ln -s /busybox/sh /bin/sh
 
 COPY --from=builder /usr/src/ipoib-cni/build/ipoib /usr/bin/
+COPY --from=builder /usr/src/ipoib-cni/build/entrypoint /entrypoint
 WORKDIR /
 
 LABEL io.k8s.display-name="IPoIB CNI"
 
-COPY ./images/entrypoint.sh /
 COPY . /src
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint"]
