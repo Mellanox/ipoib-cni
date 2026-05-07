@@ -27,6 +27,7 @@ import (
 type NetConf struct {
 	types.NetConf
 	Master string `json:"master"`
+	MTU    int    `json:"mtu,omitempty"`
 }
 
 // Manager provides interface invoke ipoib nic related operations
@@ -44,5 +45,6 @@ type NetlinkManager interface {
 	LinkSetNsFd(netlink.Link, int) error
 	LinkAdd(link netlink.Link) error
 	LinkDel(link netlink.Link) error
+	LinkSetMTU(link netlink.Link, mtu int) error
 	SetSysVal(attribute, value string) (string, error)
 }

@@ -162,6 +162,54 @@ var _ = Describe("IPoIB", func() {
 			Expect(ipoibLink).To(BeNil())
 			mocked.AssertExpectations(GinkgoT())
 		})
+		It("Assuming create link with MTU", func() {
+			targetNetNS := newFakeNs()
+			mocked := &mocks.NetlinkManager{}
+			fakeLink := &FakeLink{}
+
+			netconf.MTU = 1496
+			mocked.On("LinkByName", netconf.Master).Return(fakeMasterLink, nil)
+			mocked.On("LinkAdd", mock.MatchedBy(func(l *netlink.IPoIB) bool {
+				return l.Pkey == (fakeMasterLink.Pkey&0x7fff) && l.Mode == fakeMasterLink.Mode
+			})).Return(nil)
+			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(fakeLink, nil)
+			mocked.On("LinkSetNsFd", fakeLink, mock.AnythingOfType("int")).Return(nil)
+			mocked.On("SetSysVal", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("", nil)
+			mocked.On("LinkSetDown", fakeLink).Return(nil)
+			mocked.On("LinkSetName", fakeLink, mock.AnythingOfType("string")).Return(nil)
+			mocked.On("LinkSetMTU", fakeLink, 1496).Return(nil)
+			mocked.On("LinkSetUp", fakeLink).Return(nil)
+
+			im := ipoibManager{nLink: mocked}
+			ipoibLink, err := im.CreateIpoibLink(netconf, ifName, targetNetNS)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipoibLink).NotTo(BeNil())
+			mocked.AssertExpectations(GinkgoT())
+		})
+		It("Assuming failed to set MTU", func() {
+			targetNetNS := newFakeNs()
+			mocked := &mocks.NetlinkManager{}
+			fakeLink := &FakeLink{}
+
+			netconf.MTU = 1496
+			mocked.On("LinkByName", netconf.Master).Return(fakeMasterLink, nil)
+			mocked.On("LinkAdd", mock.Anything).Return(nil)
+			mocked.On("LinkByName", mock.AnythingOfType("string")).Return(fakeLink, nil)
+			mocked.On("LinkSetNsFd", fakeLink, mock.AnythingOfType("int")).Return(nil)
+			mocked.On("SetSysVal", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("", nil)
+			mocked.On("LinkSetDown", fakeLink).Return(nil)
+			mocked.On("LinkSetName", fakeLink, mock.AnythingOfType("string")).Return(nil)
+			mocked.On("LinkSetMTU", fakeLink, 1496).Return(errors.New("failed to set MTU"))
+			mocked.On("LinkDel", mock.Anything).Return(nil)
+
+			im := ipoibManager{nLink: mocked}
+			ipoibLink, err := im.CreateIpoibLink(netconf, ifName, targetNetNS)
+
+			Expect(err).To(HaveOccurred())
+			Expect(ipoibLink).To(BeNil())
+			mocked.AssertExpectations(GinkgoT())
+		})
 		It("Assuming failed to change name", func() {
 			targetNetNS := newFakeNs()
 			mocked := &mocks.NetlinkManager{}

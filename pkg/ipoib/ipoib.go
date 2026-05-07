@@ -73,6 +73,11 @@ func (n *netLink) LinkDel(link netlink.Link) error {
 	return netlink.LinkDel(link)
 }
 
+// LinkSetMTU using NetlinkManager
+func (n *netLink) LinkSetMTU(link netlink.Link, mtu int) error {
+	return netlink.LinkSetMTU(link, mtu)
+}
+
 // SetSysVal set value for sysctl attribute
 func (n *netLink) SetSysVal(attribute, value string) (string, error) {
 	return sysctl.Sysctl(attribute, value)
@@ -153,6 +158,12 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		if innerErr := im.nLink.LinkSetName(link, ifName); innerErr != nil {
 			_ = im.nLink.LinkDel(ipoibLink)
 			return fmt.Errorf("failed to rename interface to %q: %v", ifName, innerErr)
+		}
+		if conf.MTU > 0 {
+			if innerErr := im.nLink.LinkSetMTU(link, conf.MTU); innerErr != nil {
+				_ = im.nLink.LinkDel(ipoibLink)
+				return fmt.Errorf("failed to set MTU %d on interface %q: %v", conf.MTU, ifName, innerErr)
+			}
 		}
 		if innerErr := im.nLink.LinkSetUp(link); innerErr != nil {
 			return innerErr
