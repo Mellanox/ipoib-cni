@@ -15,6 +15,7 @@ Allow user to create IPoIB child link and move it to the pod.
 	"name": "mynet",
 	"type": "ipoib",
 	"master": "ib0",
+	"mtu": 1496,
 	"ipam": {
         "type": "host-local",
         "subnet": "192.168.2.0/24",
@@ -31,6 +32,7 @@ Allow user to create IPoIB child link and move it to the pod.
 * `name` (string, required): the name of the network
 * `type` (string, required): "ipoib"
 * `master` (string, required): name of the host interface to create the link from
+* `mtu` (integer, optional): MTU to set on the IPoIB interface inside the container. Must not exceed the master interface MTU. If omitted, the master interface MTU is inherited.
 * `ipam` (dictionary, required): IPAM configuration to be used for this network. For interface only without ip address, create empty dictionary, `dhcp` type is not supported.
 
 ## Limitations
