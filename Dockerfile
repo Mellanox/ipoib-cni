@@ -16,7 +16,7 @@
 
 ARG BASE_IMAGE_GO_DISTROLESS
 
-FROM golang:1.26-alpine as builder
+FROM golang:1.27-alpine as builder
 
 ARG GOPROXY
 ENV GOPROXY=$GOPROXY
