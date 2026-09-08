@@ -3,7 +3,7 @@ module github.com/Mellanox/ipoib-cni
 go 1.25
 
 require (
-	github.com/containernetworking/cni v1.3.0
+	github.com/containernetworking/cni v1.3.1
 	github.com/containernetworking/plugins v1.9.1
 	github.com/j-keck/arping v1.0.3
 	github.com/onsi/ginkgo/v2 v2.28.2
@@ -25,6 +25,8 @@ require (
 	github.com/safchain/ethtool v0.6.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
+	go.opentelemetry.io/otel v1.29.0 // indirect
+	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
