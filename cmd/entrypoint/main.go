@@ -61,7 +61,7 @@ func run() int {
 		return 1
 	}
 
-	info, err := os.Stat(cniBinDirClean)
+	info, err := os.Stat(cniBinDirClean) // #nosec G703 -- The operator configures this host CNI installation directory.
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cni-bin-dir %q does not exist: %v\n", cniBinDirClean, err)
 		return 1
@@ -97,8 +97,8 @@ func run() int {
 func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) error {
 	tempFilePath := filepath.Join(destDir, tempFileName)
 	// check temp filepath and remove old file if exists
-	if _, err := os.Stat(tempFilePath); err == nil {
-		err = os.Remove(tempFilePath)
+	if _, err := os.Stat(tempFilePath); err == nil { // #nosec G703 -- Operator-selected directory and sanitized basename.
+		err = os.Remove(tempFilePath) // #nosec G703 -- Same trusted directory and basename as the preceding Stat.
 		if err != nil {
 			return fmt.Errorf("cannot remove old temp file %q: %v", tempFilePath, err)
 		}
@@ -128,7 +128,7 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 		if err != nil {
 			return fmt.Errorf("cannot close temp file %q: %v", tempFilePath, err)
 		}
-		err = os.Remove(tempFilePath)
+		err = os.Remove(tempFilePath) // #nosec G703 -- Same trusted directory and basename as the preceding Stat.
 		if err != nil {
 			return fmt.Errorf("cannot remove temp file %q: %v", tempFilePath, err)
 		}
@@ -143,7 +143,7 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 
 	// change file mode if different
 	destFilePath := filepath.Join(destDir, destFileName)
-	_, err = os.Stat(destFilePath)
+	_, err = os.Stat(destFilePath) // #nosec G703 -- Operator-selected directory and sanitized basename.
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -157,7 +157,7 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 	}
 
 	// replace file with tempfile
-	if err := os.Rename(f.Name(), destFilePath); err != nil {
+	if err := os.Rename(f.Name(), destFilePath); err != nil { // #nosec G703 -- Trusted CNI destination.
 		return fmt.Errorf("cannot replace %q with temp file %q: %v", destFilePath, tempFilePath, err)
 	}
 

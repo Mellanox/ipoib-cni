@@ -37,8 +37,8 @@ GOPROXY ?= $(shell go env GOPROXY)
 
 # Go tools
 GO      = go
-GOLANGCI_LINT = $(BINDIR)/golangci-lint-$(GOLANGCI_LINT_VER)
-GOLANGCI_LINT_VER ?= v2.11.4
+GOLANGCI_LINT = $(BINDIR)/golangci-lint-$(GOLANGCILINT_VERSION)
+GOLANGCILINT_VERSION ?= v2.11.4
 TIMEOUT = 15
 Q = $(if $(filter 1,$V),,@)
 
@@ -66,7 +66,7 @@ build-entrypoint: | $(BUILDDIR) ; $(info Building entrypoint...) ## Build entryp
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): | $(BINDIR) ; $(info  building golangci-lint...)
-	$Q GOBIN=$(BINDIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+	$Q GOBIN=$(BINDIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCILINT_VERSION)
 	mv $(BINDIR)/golangci-lint $(GOLANGCI_LINT)
 
 GOVERALLS = $(BINDIR)/goveralls
