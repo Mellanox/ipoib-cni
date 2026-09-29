@@ -139,7 +139,7 @@ func (im *ipoibManager) CreateIpoibLink(conf *types.NetConf, ifName string, netn
 		return nil, err
 	}
 
-	fd := int(netns.Fd()) //nolint:gosec // fd values fit in int
+	fd := int(netns.Fd())
 	if err = im.nLink.LinkSetNsFd(link, fd); err != nil {
 		return nil, fmt.Errorf("failed to move interface %s to netns: %v", tmpName, err)
 	}
