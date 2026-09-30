@@ -16,7 +16,10 @@
 
 ARG BASE_IMAGE_GO_DISTROLESS
 
-FROM golang:1.26-alpine as builder
+ARG BASE_IMAGE_GO_BUILDER_ALPINE=golang:1.26-alpine
+# The image tag comes from the central policy or the standalone ARG default.
+# hadolint ignore=DL3006
+FROM ${BASE_IMAGE_GO_BUILDER_ALPINE} as builder
 
 ARG GOPROXY
 ENV GOPROXY=$GOPROXY
