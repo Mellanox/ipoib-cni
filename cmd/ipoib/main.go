@@ -86,7 +86,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}()
 
 	// Assume L2 interface only
-	result := &current.Result{CNIVersion: cniVersion, Interfaces: []*current.Interface{ibLink}}
+	result := &current.Result{CNIVersion: current.ImplementedSpecVersion, Interfaces: []*current.Interface{ibLink}}
 
 	if isIpamProvided {
 		if n.IPAM.Type == dhcpType {
