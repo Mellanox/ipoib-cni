@@ -55,13 +55,27 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func cmdAdd(args *skel.CmdArgs) error {
+// cmdAdd uses a named error so that the deferred link cleanup sees every failure,
+// including one returned directly by PrintResult.
+func cmdAdd(args *skel.CmdArgs) (err error) {
 	n, cniVersion, err := config.LoadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
 
 	isIpamProvided := n.IPAM.Type != ""
+	if !isIpamProvided {
+		// A 0.1.0 or 0.2.0 result has no interface list and needs an IP address, so an
+		// L2-only result cannot be converted to it. Fail before creating the interface.
+		hasInterfaces, verErr := cniversion.GreaterThanOrEqualTo(cniVersion, "0.3.0")
+		if verErr != nil {
+			return fmt.Errorf("invalid cniVersion %q: %v", cniVersion, verErr)
+		}
+		if !hasInterfaces {
+			return fmt.Errorf("cniVersion %s without ipam is not supported: "+
+				"an L2-only result needs cniVersion 0.3.0 or later", cniVersion)
+		}
+	}
 
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
