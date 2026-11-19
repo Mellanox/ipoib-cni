@@ -44,7 +44,7 @@ GO_LOCAL_VERSION := $(patsubst go%,%,$(shell $(GO) env GOVERSION))
 GO_TOOLCHAIN_VERSION := $(shell printf '%s\n%s\n' "$(GO_MOD_VERSION)" "$(GO_LOCAL_VERSION)" | sort -V | tail -n 1)
 GO_TOOLCHAIN := go$(GO_TOOLCHAIN_VERSION)
 GOLANGCI_LINT = $(BINDIR)/golangci-lint-$(GOLANGCILINT_VERSION)
-GOLANGCILINT_VERSION ?= v2.12.2
+GOLANGCILINT_VERSION ?= v2.15.0
 TIMEOUT = 15
 Q = $(if $(filter 1,$V),,@)
 
