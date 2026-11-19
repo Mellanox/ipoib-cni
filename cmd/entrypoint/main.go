@@ -109,8 +109,17 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 	if err != nil {
 		return fmt.Errorf("cannot create temp file %q in %q: %v", tempFileName, destDir, err)
 	}
+	// CreateTemp appends a random suffix, so use the name it picked
+	tempFilePath = f.Name()
 	defer func() {
 		err = errors.Join(err, f.Close())
+	}()
+	// remove the temp file unless it was renamed into place
+	installed := false
+	defer func() {
+		if !installed {
+			_ = os.Remove(tempFilePath) // #nosec G703 -- Temp file created above in the trusted directory.
+		}
 	}()
 
 	srcFile, err := os.Open(srcFilePath) //nolint:gosec
@@ -124,14 +133,6 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 	// Copy file to tempfile
 	_, err = io.Copy(f, srcFile)
 	if err != nil {
-		err = f.Close()
-		if err != nil {
-			return fmt.Errorf("cannot close temp file %q: %v", tempFilePath, err)
-		}
-		err = os.Remove(tempFilePath) // #nosec G703 -- Same trusted directory and basename as the preceding Stat.
-		if err != nil {
-			return fmt.Errorf("cannot remove temp file %q: %v", tempFilePath, err)
-		}
 		return fmt.Errorf("cannot write data to temp file %q: %v", tempFilePath, err)
 	}
 	if err = f.Sync(); err != nil {
@@ -160,6 +161,7 @@ func copyFileAtomic(srcFilePath, destDir, tempFileName, destFileName string) err
 	if err := os.Rename(f.Name(), destFilePath); err != nil { // #nosec G703 -- Trusted CNI destination.
 		return fmt.Errorf("cannot replace %q with temp file %q: %v", destFilePath, tempFilePath, err)
 	}
+	installed = true
 
 	return nil
 }

@@ -88,6 +88,22 @@ var _ = Describe("copyFile", func() {
 		err := copyFileAtomic(src, filepath.Join(tmpDir, "no-such-dir"), "src.temp", "dst")
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("reports the write error and removes the temp file when the copy fails", func() {
+		// A directory can be opened but not read, so io.Copy fails part way.
+		src := filepath.Join(tmpDir, "srcdir")
+		Expect(os.Mkdir(src, 0o755)).To(Succeed())
+		destDir := filepath.Join(tmpDir, "dest")
+		Expect(os.Mkdir(destDir, 0o755)).To(Succeed())
+
+		err := copyFileAtomic(src, destDir, "src.temp", "dst")
+		Expect(err).To(MatchError(ContainSubstring("cannot write data to temp file")))
+
+		leftovers, err := filepath.Glob(filepath.Join(destDir, "src.temp*"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(leftovers).To(BeEmpty())
+		Expect(filepath.Join(destDir, "dst")).NotTo(BeAnExistingFile())
+	})
 })
 
 var _ = Describe("run", func() {
